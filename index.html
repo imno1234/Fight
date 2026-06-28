@@ -2,122 +2,265 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Fight Demo</title>
+  <title>FIGHT</title>
+
   <style>
-    html,body{margin:0;height:100%;overflow:hidden;background:#111;}
+    :root{--v:1vmin;}
+    html,body{margin:0;height:100%;overflow:hidden;background:#111;overflow-x:hidden;}
     #c{position:fixed;inset:0}
-    h1{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-    margin:0;font:900 200px Impact,Anton,sans-serif;color:#fff;
-    letter-spacing:3px;
-    text-shadow:0 10px 0 rgba(255,80,80,.28),0 0 16px rgba(255,70,70,.12);
-    user-select:none}
-    #fontSlider{position:fixed;left:40px;top:50%;transform:translateY(-50%);
-    width:min(40px,7vw);height:min(420px,50vh);z-index:1000;}
-    #fontSlider, #fontSlider *{user-select:none;-webkit-user-select:none;
-    -moz-user-select:none;-webkit-user-drag:none;}
-    #sliderTrack{position:absolute;left:50%;transform:translateX(-50%);
-    width:0;height:0;
-    border-left:min(10px,1vw) solid transparent;
-    border-right:min(10px,1vw) solid transparent;
-    border-top:min(420px,50vh) solid rgba(255,255,255,.18);}
-    #sliderKnob{position:absolute;left:50%;transform:translate(-50%,-50%);
-    width:22px;height:22px;border-radius:50%;background:white;
-    cursor:pointer;box-shadow:0 0 10px rgba(255,255,255,.6);}
-    .prompt-box{position:fixed;left:50%;bottom:60px;transform:translateX(-50%);
-    width:min(330px,50vw);height:40px;
-    background:#fff; /*#2b2b2b;*/
-    border-radius:999px;
-    display:flex;align-items:center;padding:0 12px;
-    box-shadow:0 10px 30px rgba(0,0,0,.45);
-    border:1px solid rgba(255,255,255,.08);
-    z-index:100;}
-    .prompt-box input{flex:1;height:100%;border:none;outline:none;
-    background:transparent;color:#111216;font-size:20px;padding:0 16px;}
+
+    h1{
+      position:absolute;
+      left:50%;top:50%;
+      transform:translate(-50%,-50%);
+      margin:0;
+      font:900 calc(var(--v)*15) Impact,Anton,sans-serif;
+      color:#fff;
+      letter-spacing:calc(var(--v)/2);
+      text-shadow:
+        0 calc(var(--v)*1) 0 rgba(255,80,80,.28),
+        0 0 calc(var(--v)*2) rgba(255,70,70,.12);
+      user-select:none;
+    }
+
+    .prompt-box{
+      position:fixed;
+      left:50%;
+      bottom:10%;
+      transform:translateX(-50%);
+      width:min(calc(var(--v)*50),50vw);
+      height:calc(var(--v)*5);
+      background:#fff;
+      border-radius:999px;
+      display:flex;
+      align-items:center;
+      padding:0 12px;
+      box-shadow:0 calc(var(--v)*1) calc(var(--v)*4) rgba(0,0,0,.45);
+      border:1px solid rgba(255,255,255,.08);
+      z-index:100;
+    }
+
+    .prompt-box input{
+      flex:1;
+      height:100%;
+      border:none;
+      outline:none;
+      background:transparent;
+      color:#111216;
+      font-size:calc(var(--v)*2.5);
+      padding:0 calc(var(--v)*2);
+    }
+
     .prompt-box input::placeholder{color:#5b586d;}
+
+    .copy-btn{
+      position:fixed;
+      z-index:200;
+      padding:calc(var(--v)*0.5) calc(var(--v)*1.5);
+      border-radius:999px;
+      background:#fff;
+      color:#111216;
+      font-size:calc(var(--v)*2);
+      cursor:pointer;
+      user-select:none;
+    }
+
+    .crop-frame{
+      position:fixed;
+      z-index:50;
+      pointer-events:none;
+
+      border:1px solid #fff;
+      border-radius:calc(var(--v)*2);
+
+      box-sizing:border-box;
+    }
   </style>
 </head>
+
 <body>
-<canvas id="c"></canvas><h1 id="title">FIGHT</h1>
-<div id="fontSlider">
-    <div id="sliderTrack"></div>
-    <div id="sliderKnob"></div>
-</div>
+<canvas id="c"></canvas>
+<h1 id="title">FIGHT</h1>
+
 <div class="prompt-box">
-    <input id="prompt" type="text" placeholder="FIGHT, 단어 알지? 싸워, 나가서 싸워.">
+  <input id="prompt" type="text" placeholder="FIGHT">
 </div>
+
+<div class="copy-btn">COPY</div>
+<div class="crop-frame"></div>
+
 <script>
 const input=document.getElementById("prompt");
 const title=document.getElementById("title");
 const c=document.getElementById('c'),x=c.getContext('2d');
+const copyBtn=document.querySelector(".copy-btn");
+const frame = document.querySelector(".crop-frame");
 
-const knob=document.getElementById("sliderKnob");
-const slider=document.getElementById("fontSlider");
+const seed=Math.random()*Math.PI;
+let v;
 
-let dragging=false;
-let norm = 0.5;
+function sync(){
+  const vw = innerWidth * 0.01;
+  const vh = innerHeight * 0.01;
+  v = Math.min(vw, vh);
+  document.documentElement.style.setProperty("--v", v+"px");
+  c.width=innerWidth;
+  c.height=innerHeight;
 
-const MIN=100;
-const MAX=300;
+  const size = Math.min(innerWidth, innerHeight);
+  const btn = copyBtn;
 
-// 초기 위치
-knob.style.top="50%";
+  const cx = innerWidth / 2;
+  const cy = innerHeight / 2;
 
-knob.addEventListener("pointerdown", (e) => {
-    dragging = true;
-    knob.setPointerCapture(e.pointerId);
-    e.preventDefault();
+  const x = cx + size*0.42;
+  const y = cy - size*0.42;
+  const fx = cx - size*0.45;
+  const fy = cy - size*0.45;
+
+  btn.style.left = x + "px";
+  btn.style.top = y + "px";
+
+  btn.style.transform = "translate(-100%, 0%)";
+
+  frame.style.left = fx + "px";
+  frame.style.top = fy + "px";
+  frame.style.width = size*0.9 + "px";
+  frame.style.height = size*0.9 + "px";
+}
+
+window.addEventListener("resize", sync);
+window.addEventListener("orientationchange", sync);
+sync();
+
+/* ======================
+   SCROLL LOCK (mobile fix)
+====================== */
+let scrollY = 0;
+
+input.addEventListener("focus", () => {
+  scrollY = window.scrollY;
+  document.body.style.position = "fixed";
+  document.body.style.top = `-${scrollY}px`;
+  document.body.style.width = "100%";
+
+  setTimeout(() => {
+    input.scrollIntoView({ block: "center", inline: "nearest" });
+  }, 100);
 });
 
-knob.addEventListener("pointermove", (e) => {
-    if (!dragging) return;
-    const r = slider.getBoundingClientRect();
-    let y = e.clientY - r.top;
-    y = Math.max(0, Math.min(r.height, y));
-    knob.style.top = y + "px";
-    norm = y / r.height;
-    const t = 1 - norm;
-    const size = MIN + t * (MAX - MIN);
-    title.style.fontSize = size + "px";
+input.addEventListener("blur", () => {
+  document.body.style.position = "";
+  document.body.style.top = "";
+  document.body.style.width = "";
+  window.scrollTo(0, scrollY);
 });
 
-knob.addEventListener("pointerup", (e) => {
-    dragging = false;
-    knob.releasePointerCapture(e.pointerId);
-});
-
-knob.addEventListener("pointercancel", () => {
-    dragging = false;
-});
-
-function rs(){c.width=innerWidth;c.height=innerHeight}
-addEventListener("resize", () => {
-    rs();
-    knob.style.top = (norm * slider.getBoundingClientRect().height) + "px";
-});
-rs();
+/* ======================
+   NOISE
+====================== */
 function fbm(a,b){
  let t=0,f=.012,amp=1,s=0;
- for(let i=0;i<4;i++){t+=Math.sin(a*f+Math.sin(b*f*1.7+i))*amp;s+=amp;f*=2;amp*=.5;}
+ for(let i=0;i<4;i++){
+   t+=Math.sin(a*f+Math.sin(b*f*1.7+i+seed)+seed)*amp;
+   s+=amp;
+   f*=2;
+   amp*=.5;
+ }
  return t/s;
 }
+
+/* ======================
+   RENDER
+====================== */
 function draw(){
  const w=c.width,h=c.height;
- x.fillStyle="#111216";x.fillRect(0,0,w,h);
- const band=24;
+
+ x.fillStyle="#111216";
+ x.fillRect(0,0,w,h);
+
+ const band=v*2.5;
+
  for(let xx=-80;xx<w+80;xx+=band){
    x.beginPath();
-   for(let yy=0;yy<=h;yy+=6){
-      const off=fbm(yy,xx)*50+Math.sin(yy*.003)*5;
-      const xoff=xx+off;
-      if(yy===0)x.moveTo(xoff,yy); else x.lineTo(xoff,yy);
+
+   for(let yy=-10;yy<=h+10;yy+=v){
+     const off=fbm(yy,xx)*v*6+Math.sin(yy*.003+seed)*v*0.6;
+     const xoff=xx+off;
+
+     if(yy===0) x.moveTo(xoff,yy);
+     else x.lineTo(xoff,yy);
    }
-   x.lineTo(w+100,h);x.lineTo(w+100,0);x.closePath();
+
+   x.lineTo(w+100,h+10);
+   x.lineTo(w+100,-10);
+   x.closePath();
+
    x.fillStyle=((xx/band)&1)?"#5b586d":"#111216";
    x.fill();
  }
+
  requestAnimationFrame(draw);
 }
 draw();
-input.oninput=()=>title.textContent=input.value.toUpperCase()||"FIGHT";
+
+/* ======================
+   TEXT SYNC
+====================== */
+input.oninput = () =>
+  title.textContent = input.value.toUpperCase() || "FIGHT";
+
+/* ======================
+   CENTER SQUARE EXPORT
+====================== */
+function exportCenterSquare(){
+  const size = Math.min(c.width, c.height);
+  const sx = (c.width - size)/2;
+  const sy = (c.height - size)/2;
+
+  const out = document.createElement("canvas");
+  const ctx = out.getContext("2d");
+
+  out.width = size;
+  out.height = size;
+
+  ctx.drawImage(c, sx, sy, size, size, 0, 0, size, size);
+
+  // h1 overlay rendering
+  const style = getComputedStyle(title);
+
+  ctx.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  ctx.fillStyle = style.color;
+  ctx.textAlign="center";
+  ctx.textBaseline="middle";
+
+  const x0=size/2, y0=size/2;
+
+  ctx.shadowColor="rgba(255,80,80,.28)";
+  ctx.shadowOffsetY=10;
+  ctx.shadowBlur=0;
+  ctx.fillText(title.textContent, x0, y0);
+
+  ctx.shadowColor="rgba(255,70,70,.12)";
+  ctx.shadowBlur=16;
+  ctx.fillText(title.textContent, x0, y0);
+
+  return out;
+}
+
+/* ======================
+   CLIPBOARD COPY
+====================== */
+copyBtn.addEventListener("click", async () => {
+  const canvas = exportCenterSquare();
+
+  canvas.toBlob(async (blob) => {
+    await navigator.clipboard.write([
+      new ClipboardItem({ "image/png": blob })
+    ]);
+  });
+});
 </script>
-</body></html>
+
+</body>
+</html>
