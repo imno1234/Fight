@@ -251,15 +251,63 @@ function exportCenterSquare(){
 /* ======================
    CLIPBOARD COPY
 ====================== */
-copyBtn.addEventListener("click", async () => {
+copyBtn.onclick = async () => {
   const canvas = exportCenterSquare();
 
   canvas.toBlob(async (blob) => {
-    await navigator.clipboard.write([
-      new ClipboardItem({ "image/png": blob })
-    ]);
+    const isTouchDevice = matchMedia("(pointer: coarse)").matches;
+    const isSmallScreen = Math.min(innerWidth, innerHeight) < 768;
+
+    const isMobile = isTouchDevice && isSmallScreen;
+
+    // ======================
+    // 1. MOBILE: share / download
+    // ======================
+    if (isMobile) {
+
+      // 1-1 Web Share API (가능하면)
+      if (navigator.canShare && navigator.share) {
+        const file = new File([blob], "fight.png", { type: "image/png" });
+
+        if (navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: "FIGHT",
+            });
+            return;
+          } catch (e) {}
+        }
+      }
+
+      // 1-2 fallback: download
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "fight.png";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      return;
+    }
+
+    // ======================
+    // 2. DESKTOP: clipboard
+    // ======================
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ "image/png": blob })
+      ]);
+    } catch (e) {
+      // fallback download
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    }
+
   });
-});
+};
 </script>
 
 </body>
