@@ -262,68 +262,73 @@ function flashButton(text){
 
 copyBtn.onclick = () => {
   const canvas = exportCenterSquare();
-
+  const isCoarsePointer = matchMedia("(pointer: coarse)").matches;
+  
   canvas.toBlob(async (blob) => {
-
+  
     const file = new File([blob], "fight.png", {
       type: "image/png"
     });
-
+  
     // ======================
-    // 1. Clipboard
+    // Desktop → Clipboard
     // ======================
-    if (
-      navigator.clipboard &&
-      navigator.clipboard.write &&
-      window.ClipboardItem
-    ) {
-      try {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            "image/png": blob
-          })
-        ]);
-
-        flashButton("COPIED");
-        return;
-
-      } catch (e) {}
+    if (!isCoarsePointer) {
+  
+      if (navigator.clipboard?.write && window.ClipboardItem) {
+        try {
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              "image/png": blob
+            })
+          ]);
+  
+          flashButton("COPIED");
+          return;
+  
+        } catch (e) {
+          console.warn(e);
+        }
+      }
+  
     }
-
+  
     // ======================
-    // 2. Share
+    // Mobile/Desktop → Share
     // ======================
     if (
       navigator.share &&
       navigator.canShare &&
-      navigator.canShare({ files: [file] })
+      navigator.canShare({ files:[file] })
     ) {
       try {
         await navigator.share({
-          files: [file],
-          title: "FIGHT"
+          files:[file],
+          title:"FIGHT"
         });
-
+  
         flashButton("SHARED");
         return;
-
-      } catch (e) {}
+  
+      } catch (e) {
+        if (e.name === "AbortError") return;
+      }
     }
-
+  
     // ======================
-    // 3. Download
+    // Fallback → Download
     // ======================
     const url = URL.createObjectURL(blob);
-
+  
     const a = document.createElement("a");
     a.href = url;
     a.download = "fight.png";
     a.click();
-
+  
     URL.revokeObjectURL(url);
-
+  
     flashButton("DOWNLOADED");
-
+  
   }, "image/png");
 };
 </script>
