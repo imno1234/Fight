@@ -251,62 +251,80 @@ function exportCenterSquare(){
 /* ======================
    CLIPBOARD COPY
 ====================== */
-copyBtn.onclick = async () => {
+function flashButton(text){
+  const old = copyBtn.textContent;
+  copyBtn.textContent = text;
+
+  setTimeout(() => {
+    copyBtn.textContent = old;
+  }, 1500);
+}
+
+copyBtn.onclick = () => {
   const canvas = exportCenterSquare();
 
   canvas.toBlob(async (blob) => {
-    const isTouchDevice = matchMedia("(pointer: coarse)").matches;
-    const isSmallScreen = Math.min(innerWidth, innerHeight) < 768;
 
-    const isMobile = isTouchDevice && isSmallScreen;
+    const file = new File([blob], "fight.png", {
+      type: "image/png"
+    });
 
     // ======================
-    // 1. MOBILE: share / download
+    // 1. Clipboard
     // ======================
-    if (isMobile) {
+    if (
+      navigator.clipboard &&
+      navigator.clipboard.write &&
+      window.ClipboardItem
+    ) {
+      try {
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "image/png": blob
+          })
+        ]);
 
-      // 1-1 Web Share API (가능하면)
-      if (navigator.canShare && navigator.share) {
-        const file = new File([blob], "fight.png", { type: "image/png" });
+        flashButton("COPIED");
+        return;
 
-        if (navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              files: [file],
-              title: "FIGHT",
-            });
-            return;
-          } catch (e) {}
-        }
-      }
-
-      // 1-2 fallback: download
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "fight.png";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-
-      return;
+      } catch (e) {}
     }
 
     // ======================
-    // 2. DESKTOP: clipboard
+    // 2. Share
     // ======================
-    try {
-      await navigator.clipboard.write([
-        new ClipboardItem({ "image/png": blob })
-      ]);
-    } catch (e) {
-      // fallback download
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
+    if (
+      navigator.share &&
+      navigator.canShare &&
+      navigator.canShare({ files: [file] })
+    ) {
+      try {
+        await navigator.share({
+          files: [file],
+          title: "FIGHT"
+        });
+
+        flashButton("SHARED");
+        return;
+
+      } catch (e) {}
     }
 
-  });
+    // ======================
+    // 3. Download
+    // ======================
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "fight.png";
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+    flashButton("DOWNLOADED");
+
+  }, "image/png");
 };
 </script>
 
